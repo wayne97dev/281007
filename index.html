@@ -441,7 +441,7 @@
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.35;
 
   // ---------- SCENE & CAMERA ----------
   const scene = new THREE.Scene();
@@ -531,10 +531,24 @@
     return total;
   }
 
-  // ---------- GEOMETRY (high-poly displaced icosahedron) ----------
-  const subdivisions = isMobile ? 5 : 6;
+  // ---------- TEXTURES (real photo maps: NASA Moon surface via Three.js CDN) ----------
+  const texLoader = new THREE.TextureLoader();
+  texLoader.setCrossOrigin('anonymous');
+  const surfaceTex = texLoader.load(
+    'https://threejs.org/examples/textures/planets/moon_1024.jpg',
+    (t) => { t.needsUpdate = true; },
+    undefined,
+    (err) => console.warn('Surface texture failed to load:', err)
+  );
+  surfaceTex.colorSpace = THREE.SRGBColorSpace;
+  surfaceTex.wrapS = THREE.RepeatWrapping;
+  surfaceTex.wrapT = THREE.ClampToEdgeWrapping;
+  surfaceTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+
+  // ---------- GEOMETRY (high-res sphere — uniform UVs for texturing) ----------
+  const segments = isMobile ? 128 : 200;
   const baseRadius = 1.8;
-  const geo = new THREE.IcosahedronGeometry(baseRadius, subdivisions);
+  const geo = new THREE.SphereGeometry(baseRadius, segments, Math.floor(segments / 2));
   const pos = geo.attributes.position;
   const tmp = new THREE.Vector3();
   const displacements = new Float32Array(pos.count);
@@ -548,47 +562,46 @@
     let displacement = 0.42 * big + 0.13 * med + 0.045 * small;
     displacement += craterDisplacement(n) * 1.3;
     displacements[i] = displacement;
-    // slight elongation along X axis
+    // slight elongation: irregular asteroid silhouette
     const stretch = 1 + n.x * 0.07 - n.y * 0.03;
     tmp.copy(n).multiplyScalar(baseRadius * stretch + displacement * 0.55);
     pos.setXYZ(i, tmp.x, tmp.y, tmp.z);
   }
   geo.computeVertexNormals();
 
-  // ---------- VERTEX COLORS (albedo: highlands / basins / iron stains) ----------
+  // ---------- VERTEX COLORS (subtle tint multiplied with texture) ----------
+  // Acts as a soft overlay on top of the photo texture: highlands warmer/lighter,
+  // basins darker, plus iron-oxide streaks and dark mineral patches.
   const colors = new Float32Array(pos.count * 3);
-  const cHigh  = new THREE.Color(0xa49d92);
-  const cLow   = new THREE.Color(0x3d3731);
-  const cIron  = new THREE.Color(0x6b4636);
-  const cDark  = new THREE.Color(0x2a2520);
-  const cTmp   = new THREE.Color();
+  const cHigh = new THREE.Color(1.05, 0.98, 0.88);
+  const cLow  = new THREE.Color(0.62, 0.58, 0.54);
+  const cIron = new THREE.Color(1.10, 0.65, 0.45);
+  const cDark = new THREE.Color(0.40, 0.36, 0.32);
+  const cTmp  = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
     tmp.fromBufferAttribute(pos, i);
     const n = tmp.clone().normalize();
-    const variation = fbm(n.x * 4.0,        n.y * 4.0,        n.z * 4.0,        5);
-    const stain     = fbm(n.x * 2.0 + 500,  n.y * 2.0 + 500,  n.z * 2.0 + 500,  3);
-    const rough     = fbm(n.x * 12.0 + 900, n.y * 12.0 + 900, n.z * 12.0 + 900, 3);
-
-    // elevation-based: highlands lighter, basins darker
-    const elev = THREE.MathUtils.clamp((displacements[i] + 0.25) * 1.4, 0, 1);
-    cTmp.lerpColors(cLow, cHigh, elev * (0.55 + 0.45 * variation));
-
-    // iron oxidation streaks
-    if (stain > 0.6) cTmp.lerp(cIron, (stain - 0.6) * 1.2);
-    // dark patches
-    if (rough > 0.72) cTmp.lerp(cDark, (rough - 0.72) * 1.5);
-
+    const stain = fbm(n.x * 2.0 + 500, n.y * 2.0 + 500, n.z * 2.0 + 500, 3);
+    const dark  = fbm(n.x * 4.0 + 900, n.y * 4.0 + 900, n.z * 4.0 + 900, 3);
+    const elev  = THREE.MathUtils.clamp((displacements[i] + 0.25) * 1.4, 0, 1);
+    cTmp.lerpColors(cLow, cHigh, elev);
+    if (stain > 0.62) cTmp.lerp(cIron, (stain - 0.62) * 0.9);
+    if (dark  > 0.70) cTmp.lerp(cDark, (dark  - 0.70) * 1.3);
     colors[i * 3]     = cTmp.r;
     colors[i * 3 + 1] = cTmp.g;
     colors[i * 3 + 2] = cTmp.b;
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-  // ---------- MATERIAL ----------
+  // ---------- MATERIAL (real photo texture + bump from luminance + tint) ----------
   const asteroidMat = new THREE.MeshStandardMaterial({
+    map: surfaceTex,
+    bumpMap: surfaceTex,
+    bumpScale: 0.035,
+    color: 0xd6bea0,         // warm tint multiplied with texture (asteroid hue)
     vertexColors: true,
-    roughness: 0.93,
-    metalness: 0.06,
+    roughness: 0.94,
+    metalness: 0.04,
     flatShading: false,
   });
   const asteroid = new THREE.Mesh(geo, asteroidMat);
