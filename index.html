@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ASTEROID (281007) OLIVIAPERROTTO — $ASTEROID on Ethereum</title>
+<meta name="description" content="Asteroid 281007 Oliviaperrotto — the official memecoin on Ethereum, dedicated to the asteroid named after Olivia Perrotto." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #05060a;
+    --bg-2: #0a0e1a;
+    --fg: #ffffff;
+    --muted: #9aa3b2;
+    --accent: #ffd43b;
+    --accent-2: #6cb4ff;
+    --line: rgba(255,255,255,0.08);
+    --card: rgba(255,255,255,0.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--fg); font-family: 'Inter', system-ui, sans-serif; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; }
+
+  /* Starfield background canvas */
+  #stars {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background: radial-gradient(ellipse at top, #0e1530 0%, #05060a 60%, #000 100%);
+  }
+
+  /* Layout */
+  .wrap { position: relative; z-index: 2; }
+  header {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+    background: rgba(5,6,10,0.6);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav {
+    max-width: 1280px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; font-family: 'Orbitron', sans-serif; font-weight: 900; letter-spacing: 0.08em; }
+  .brand-mark {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #cfd2d8, #6b6e75 60%, #2a2c30 100%);
+    box-shadow: inset -4px -6px 10px rgba(0,0,0,0.5), 0 0 20px rgba(108,180,255,0.25);
+  }
+  .brand-text { font-size: 14px; }
+  .brand-text small { display: block; font-family: 'Inter', sans-serif; font-weight: 500; letter-spacing: 0.04em; color: var(--muted); font-size: 11px; }
+  nav.links { display: flex; gap: 22px; align-items: center; }
+  nav.links a { color: var(--muted); font-size: 14px; transition: color .2s; }
+  nav.links a:hover { color: var(--fg); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 999px;
+    background: var(--accent); color: #000; font-weight: 700; font-size: 14px;
+    border: none; cursor: pointer; transition: transform .15s, box-shadow .2s;
+    box-shadow: 0 0 0 0 rgba(255,212,59,0.5);
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 0 24px 0 rgba(255,212,59,0.45); }
+  .btn.secondary { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+  .btn.secondary:hover { background: rgba(255,255,255,0.05); }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    max-width: 1280px; margin: 0 auto;
+    padding: 60px 24px 40px;
+    display: grid; grid-template-columns: 1.05fr 1fr;
+    gap: 40px; align-items: center; min-height: 78vh;
+  }
+  .hero-text h1 {
+    font-family: 'Orbitron', sans-serif; font-weight: 900;
+    font-size: clamp(40px, 7vw, 84px); line-height: 1; letter-spacing: -0.01em;
+  }
+  .hero-text h1 .accent { color: var(--accent); }
+  .hero-text .sub {
+    margin-top: 16px; color: var(--muted); font-size: clamp(15px, 1.4vw, 18px); max-width: 540px; line-height: 1.55;
+  }
+  .hero-text .designation {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-radius: 999px;
+    background: rgba(108,180,255,0.08); border: 1px solid rgba(108,180,255,0.25);
+    color: var(--accent-2); font-size: 12px; letter-spacing: 0.18em; font-weight: 700;
+    margin-bottom: 18px;
+  }
+  .designation .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 8px var(--accent-2); }
+
+  .ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
+  .ca-box {
+    margin-top: 28px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px; border-radius: 12px;
+    background: var(--card); border: 1px solid var(--line);
+    max-width: 560px;
+  }
+  .ca-box .label { font-size: 11px; color: var(--muted); letter-spacing: 0.18em; font-weight: 700; }
+  .ca-box code {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 13px; color: #e6ebf3; flex: 1; overflow: hidden; text-overflow: ellipsis;
+  }
+  .copy-btn {
+    border: 1px solid var(--line); background: transparent; color: var(--fg);
+    padding: 6px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; transition: background .15s;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,0.06); }
+  .copy-btn.copied { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  /* 3D canvas container */
+  .hero-3d {
+    position: relative; width: 100%; aspect-ratio: 1 / 1; min-height: 400px;
+  }
+  #asteroid-canvas {
+    width: 100%; height: 100%;
+    filter: drop-shadow(0 30px 60px rgba(108,180,255,0.15));
+  }
+  .hero-3d::after {
+    content: ''; position: absolute; inset: 10% 10%; border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%, rgba(108,180,255,0.18) 0%, transparent 60%);
+    z-index: -1; pointer-events: none;
+  }
+
+  /* Sections */
+  section { max-width: 1280px; margin: 0 auto; padding: 80px 24px; }
+  .section-title {
+    font-family: 'Orbitron', sans-serif; font-weight: 900;
+    font-size: clamp(28px, 4vw, 48px); margin-bottom: 12px;
+  }
+  .section-sub { color: var(--muted); max-width: 640px; margin-bottom: 40px; font-size: 16px; line-height: 1.6; }
+
+  /* About */
+  .about {
+    display: grid; grid-template-columns: 1fr 1.2fr; gap: 48px; align-items: center;
+  }
+  .badge-wrap {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    aspect-ratio: 1/1;
+  }
+  .badge-wrap::before {
+    content: ''; position: absolute; inset: -20px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(108,180,255,0.25) 0%, transparent 65%);
+    animation: pulse 4s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { transform: scale(1.06); opacity: 0.7; } }
+  .badge-wrap img { width: 100%; max-width: 420px; border-radius: 50%; position: relative; z-index: 1; }
+  .badge-fallback {
+    width: 100%; max-width: 420px; aspect-ratio: 1/1; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #1a2240, #000510);
+    border: 6px solid #0a1530; display: flex; align-items: center; justify-content: center;
+    text-align: center; font-family: 'Orbitron', sans-serif; font-weight: 900; color: var(--accent);
+    font-size: 22px; padding: 30px; position: relative; z-index: 1;
+  }
+
+  .about-text h3 { font-family: 'Orbitron', sans-serif; font-size: 22px; margin-bottom: 16px; color: var(--accent); letter-spacing: 0.04em; }
+  .about-text p { color: var(--muted); font-size: 16px; line-height: 1.7; margin-bottom: 16px; }
+  .about-text p strong { color: var(--fg); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 28px; }
+  .stat {
+    padding: 18px; border-radius: 12px; background: var(--card); border: 1px solid var(--line);
+  }
+  .stat .num { font-family: 'Orbitron', sans-serif; font-size: 22px; color: var(--accent); font-weight: 700; }
+  .stat .lbl { font-size: 11px; color: var(--muted); letter-spacing: 0.16em; margin-top: 4px; text-transform: uppercase; }
+
+  /* How to buy */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .step {
+    padding: 24px; border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid var(--line); transition: transform .2s, border-color .2s;
+  }
+  .step:hover { transform: translateY(-4px); border-color: rgba(255,212,59,0.4); }
+  .step .num {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--accent); color: #000; font-family: 'Orbitron', sans-serif; font-weight: 900;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
+  }
+  .step h4 { font-family: 'Orbitron', sans-serif; font-size: 16px; margin-bottom: 8px; }
+  .step p { color: var(--muted); font-size: 14px; line-height: 1.55; }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--line); margin-top: 60px;
+    padding: 40px 24px; text-align: center;
+  }
+  footer .socials { display: flex; gap: 14px; justify-content: center; margin-bottom: 18px; }
+  footer .socials a {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid var(--line); display: flex; align-items: center; justify-content: center;
+    transition: background .2s, border-color .2s, transform .15s;
+  }
+  footer .socials a:hover { background: rgba(255,212,59,0.1); border-color: var(--accent); transform: translateY(-2px); }
+  footer .socials svg { width: 18px; height: 18px; }
+  footer .disclaimer { color: var(--muted); font-size: 12px; max-width: 720px; margin: 18px auto 0; line-height: 1.6; }
+  footer .copy { color: var(--muted); font-size: 12px; margin-top: 18px; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; padding-top: 30px; min-height: auto; gap: 20px; }
+    .hero-3d { aspect-ratio: 1/1; max-width: 460px; margin: 0 auto; }
+    .about { grid-template-columns: 1fr; gap: 30px; }
+    .badge-wrap { max-width: 320px; margin: 0 auto; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    nav.links { display: none; }
+    .stats { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .stat .num { font-size: 18px; }
+  }
+  @media (max-width: 500px) {
+    .steps { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: 1fr; }
+    .ca-box { flex-wrap: wrap; }
+    .ca-box code { font-size: 11px; min-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="wrap">
+  <header>
+    <div class="nav">
+      <a href="#" class="brand">
+        <div class="brand-mark"></div>
+        <div class="brand-text">
+          ASTEROID
+          <small>(281007) OLIVIAPERROTTO</small>
+        </div>
+      </a>
+      <nav class="links">
+        <a href="#about">About</a>
+        <a href="#how">How to Buy</a>
+        <a href="https://t.me/AsteroidOliviaperrotto281007" target="_blank" rel="noopener">Telegram</a>
+        <a href="https://x.com/281007asteroid" target="_blank" rel="noopener">X</a>
+      </nav>
+      <a class="btn" href="https://app.uniswap.org/swap?outputCurrency=0x7c5E0f17F5Bb2d76d5f752d9Ef4e0Cdcb8BFb70b&chain=mainnet" target="_blank" rel="noopener">Buy $ASTEROID</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-text">
+      <div class="designation"><span class="dot"></span> MAIN BELT &middot; DISCOVERED 2006</div>
+      <h1>ASTEROID <span class="accent">281007</span><br/>OLIVIAPERROTTO</h1>
+      <p class="sub">A real asteroid orbits the Sun named <strong>(281007) Oliviaperrotto</strong>. Now it lives on Ethereum too — a community token launched in her honor. Tiny rock. Huge orbit.</p>
+      <div class="ctas">
+        <a class="btn" href="https://app.uniswap.org/swap?outputCurrency=0x7c5E0f17F5Bb2d76d5f752d9Ef4e0Cdcb8BFb70b&chain=mainnet" target="_blank" rel="noopener">Buy on Uniswap →</a>
+        <a class="btn secondary" href="https://dexscreener.com/ethereum/0x7c5E0f17F5Bb2d76d5f752d9Ef4e0Cdcb8BFb70b" target="_blank" rel="noopener">Chart</a>
+        <a class="btn secondary" href="https://t.me/AsteroidOliviaperrotto281007" target="_blank" rel="noopener">Telegram</a>
+      </div>
+      <div class="ca-box">
+        <span class="label">CA</span>
+        <code id="ca">0x7c5E0f17F5Bb2d76d5f752d9Ef4e0Cdcb8BFb70b</code>
+        <button class="copy-btn" id="copyBtn">Copy</button>
+      </div>
+    </div>
+    <div class="hero-3d">
+      <canvas id="asteroid-canvas"></canvas>
+    </div>
+  </section>
+
+  <section id="about" class="about-section">
+    <div class="about">
+      <div class="badge-wrap">
+        <img id="badge" src="logo.png" alt="Asteroid 281007 Olivia Perrotto badge" onerror="this.style.display='none';document.getElementById('badge-fb').style.display='flex';" />
+        <div id="badge-fb" class="badge-fallback" style="display:none;">ASTEROID 281007<br/>OLIVIA PERROTTO</div>
+      </div>
+      <div class="about-text">
+        <h3>About the rock</h3>
+        <p><strong>(281007) Oliviaperrotto</strong> is a main-belt asteroid discovered in 2006, orbiting somewhere between Mars and Jupiter. It was officially named after Olivia Perrotto by the IAU — a permanent dedication etched into the solar system.</p>
+        <p>This token is a tribute. A small piece of internet folklore for a small piece of cosmic rock. Community-driven, fair-launched on Ethereum, no team allocation, LP burned.</p>
+        <div class="stats">
+          <div class="stat"><div class="num">281007</div><div class="lbl">Designation</div></div>
+          <div class="stat"><div class="num">Main Belt</div><div class="lbl">Orbit</div></div>
+          <div class="stat"><div class="num">~2006</div><div class="lbl">Discovered</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <h2 class="section-title">How to Buy</h2>
+    <p class="section-sub">Four steps to add a piece of the asteroid belt to your wallet.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <h4>Get a Wallet</h4>
+        <p>Install MetaMask or any Ethereum wallet. Set it up and back up your seed phrase.</p>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <h4>Fund with ETH</h4>
+        <p>Buy ETH from any exchange (Coinbase, Binance, Kraken) and send it to your wallet.</p>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <h4>Open Uniswap</h4>
+        <p>Go to Uniswap, connect your wallet, paste the contract address into the swap box.</p>
+      </div>
+      <div class="step">
+        <div class="num">4</div>
+        <h4>Swap for $ASTEROID</h4>
+        <p>Choose your slippage, confirm the transaction, and welcome to the orbit.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="socials">
+      <a href="https://t.me/AsteroidOliviaperrotto281007" target="_blank" rel="noopener" aria-label="Telegram">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
+      </a>
+      <a href="https://x.com/281007asteroid" target="_blank" rel="noopener" aria-label="X">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+      <a href="https://etherscan.io/token/0x7c5E0f17F5Bb2d76d5f752d9Ef4e0Cdcb8BFb70b" target="_blank" rel="noopener" aria-label="Etherscan">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 14h3v3H7zm4-4h3v7h-3zm4-3h3v10h-3z"/></svg>
+      </a>
+    </div>
+    <p class="disclaimer">$ASTEROID is a community memecoin with no intrinsic value or expectation of financial return. Always do your own research. Crypto is risky — never invest more than you can afford to lose. Not affiliated with the IAU or NASA.</p>
+    <p class="copy">© 2026 ASTEROID (281007) OLIVIAPERROTTO. To the belt and beyond.</p>
+  </footer>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script>
+  // ---------- Starfield (pure canvas) ----------
+  (function(){
+    const canvas = document.getElementById('stars');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+    let w, h;
+
+    function resize() {
+      w = canvas.width = window.innerWidth * devicePixelRatio;
+      h = canvas.height = window.innerHeight * devicePixelRatio;
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      const count = Math.min(380, Math.floor((w * h) / 18000));
+      stars = Array.from({length: count}, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        r: Math.random() * 1.4 * devicePixelRatio + 0.2,
+        a: Math.random() * 0.6 + 0.2,
+        s: Math.random() * 0.5 + 0.2,
+        tw: Math.random() * Math.PI * 2
+      }));
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function frame(t) {
+      ctx.clearRect(0, 0, w, h);
+      for (const s of stars) {
+        s.tw += 0.02 * s.s;
+        const a = s.a * (0.7 + 0.3 * Math.sin(s.tw));
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${a})`;
+        ctx.fill();
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+
+  // ---------- Copy CA ----------
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    const text = document.getElementById('ca').textContent.trim();
+    try {
+      await navigator.clipboard.writeText(text);
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+    } catch (e) { console.error(e); }
+  });
+</script>
+
+<script type="module">
+  import * as THREE from 'three';
+
+  // ---------- 3D Asteroid ----------
+  const canvas = document.getElementById('asteroid-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  camera.position.set(0, 0, 6);
+
+  function fit() {
+    const rect = canvas.getBoundingClientRect();
+    renderer.setSize(rect.width, rect.height, false);
+    camera.aspect = rect.width / rect.height;
+    camera.updateProjectionMatrix();
+  }
+  fit();
+  window.addEventListener('resize', fit);
+
+  // Lights
+  const ambient = new THREE.AmbientLight(0x222a3a, 0.6);
+  scene.add(ambient);
+  const key = new THREE.DirectionalLight(0xfff2cc, 2.2);
+  key.position.set(5, 3, 4);
+  scene.add(key);
+  const rim = new THREE.DirectionalLight(0x6cb4ff, 0.9);
+  rim.position.set(-5, -2, -3);
+  scene.add(rim);
+  const fill = new THREE.PointLight(0xffd43b, 0.4, 20);
+  fill.position.set(0, -3, 5);
+  scene.add(fill);
+
+  // Procedural noise (simple value-noise via hash) for asteroid deformation
+  function hash(x, y, z) {
+    const n = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453;
+    return n - Math.floor(n);
+  }
+  function smoothNoise(x, y, z) {
+    const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+    const xf = x - xi, yf = y - yi, zf = z - zi;
+    const u = xf*xf*(3-2*xf), v = yf*yf*(3-2*yf), w = zf*zf*(3-2*zf);
+    const c000 = hash(xi,yi,zi), c100 = hash(xi+1,yi,zi);
+    const c010 = hash(xi,yi+1,zi), c110 = hash(xi+1,yi+1,zi);
+    const c001 = hash(xi,yi,zi+1), c101 = hash(xi+1,yi,zi+1);
+    const c011 = hash(xi,yi+1,zi+1), c111 = hash(xi+1,yi+1,zi+1);
+    const x00 = c000*(1-u)+c100*u, x10 = c010*(1-u)+c110*u;
+    const x01 = c001*(1-u)+c101*u, x11 = c011*(1-u)+c111*u;
+    const y0 = x00*(1-v)+x10*v, y1 = x01*(1-v)+x11*v;
+    return y0*(1-w)+y1*w;
+  }
+  function fbm(x, y, z, octaves = 5) {
+    let v = 0, amp = 0.5, freq = 1;
+    for (let i = 0; i < octaves; i++) {
+      v += amp * smoothNoise(x*freq, y*freq, z*freq);
+      amp *= 0.5; freq *= 2.1;
+    }
+    return v;
+  }
+
+  // Build asteroid geometry (icosahedron, displaced)
+  const geo = new THREE.IcosahedronGeometry(1.8, 5);
+  const pos = geo.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const n = v.clone().normalize();
+    // Large-scale bumps
+    const big = fbm(n.x * 1.4, n.y * 1.4, n.z * 1.4, 4);
+    // Smaller craters/roughness
+    const small = fbm(n.x * 4 + 10, n.y * 4 + 10, n.z * 4 + 10, 5);
+    // Crater pits — sharp negative dips
+    const c = fbm(n.x * 2.5 + 50, n.y * 2.5 + 50, n.z * 2.5 + 50, 3);
+    let crater = 0;
+    if (c > 0.62) crater = -(c - 0.62) * 1.6;
+    const displacement = 0.55 * big + 0.18 * small + crater;
+    v.copy(n).multiplyScalar(1.8 + displacement * 0.55);
+    pos.setXYZ(i, v.x, v.y, v.z);
+  }
+  geo.computeVertexNormals();
+
+  // Material — gray rocky with subtle warm tint
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xb6b3ad,
+    roughness: 0.95,
+    metalness: 0.05,
+    flatShading: false,
+  });
+
+  // Per-vertex color variation baked into geometry for visual interest
+  const colors = new Float32Array(pos.count * 3);
+  const tmp = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    tmp.fromBufferAttribute(pos, i).normalize();
+    const shade = 0.55 + 0.45 * fbm(tmp.x*3+1, tmp.y*3+1, tmp.z*3+1, 4);
+    colors[i*3]   = 0.72 * shade;
+    colors[i*3+1] = 0.68 * shade;
+    colors[i*3+2] = 0.62 * shade;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  mat.vertexColors = true;
+
+  const asteroid = new THREE.Mesh(geo, mat);
+  asteroid.rotation.z = 0.3;
+  scene.add(asteroid);
+
+  // Subtle glow halo (back sprite)
+  const haloGeo = new THREE.RingGeometry(2.2, 3.0, 64);
+  const haloMat = new THREE.MeshBasicMaterial({
+    color: 0x6cb4ff, transparent: true, opacity: 0.06, side: THREE.DoubleSide
+  });
+  const halo = new THREE.Mesh(haloGeo, haloMat);
+  halo.position.z = -0.5;
+  scene.add(halo);
+
+  // Tiny orbiting debris
+  const debrisGroup = new THREE.Group();
+  for (let i = 0; i < 14; i++) {
+    const d = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(0.04 + Math.random()*0.05, 0),
+      new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 1 })
+    );
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 2.3 + Math.random() * 0.8;
+    d.userData = { angle, radius, speed: 0.2 + Math.random()*0.3, tilt: (Math.random()-0.5)*0.6 };
+    debrisGroup.add(d);
+  }
+  scene.add(debrisGroup);
+
+  // Mouse parallax
+  let mx = 0, my = 0, tx = 0, ty = 0;
+  window.addEventListener('mousemove', (e) => {
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    mx = (e.clientX - cx) / cx;
+    my = (e.clientY - cy) / cy;
+  });
+
+  let dragging = false, lastX = 0, lastY = 0, vx = 0, vy = 0;
+  canvas.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointerup', (e) => { dragging = false; });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX; const dy = e.clientY - lastY;
+    vx = dy * 0.005; vy = dx * 0.005;
+    asteroid.rotation.x += vx;
+    asteroid.rotation.y += vy;
+    lastX = e.clientX; lastY = e.clientY;
+  });
+
+  const clock = new THREE.Clock();
+  function animate() {
+    const dt = clock.getDelta();
+    const t = clock.elapsedTime;
+
+    if (!dragging) {
+      asteroid.rotation.y += dt * 0.25;
+      asteroid.rotation.x += dt * 0.05;
+    }
+
+    // smooth parallax
+    tx += (mx * 0.25 - tx) * 0.05;
+    ty += (my * 0.25 - ty) * 0.05;
+    camera.position.x = tx;
+    camera.position.y = -ty;
+    camera.lookAt(0, 0, 0);
+
+    halo.rotation.z += dt * 0.1;
+
+    debrisGroup.children.forEach((d) => {
+      const u = d.userData;
+      u.angle += dt * u.speed;
+      d.position.x = Math.cos(u.angle) * u.radius;
+      d.position.z = Math.sin(u.angle) * u.radius;
+      d.position.y = Math.sin(u.angle * 1.4 + u.tilt) * 0.5;
+      d.rotation.x += dt;
+      d.rotation.y += dt * 0.7;
+    });
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+  animate();
+</script>
+
+</body>
+</html>
