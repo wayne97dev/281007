@@ -690,35 +690,86 @@
   const stars = new THREE.Points(starsGeo, starsMat);
   scene.add(stars);
 
-  // ---------- ORBITAL DEBRIS (varied shapes, per-axis tumble) ----------
+  // ---------- ORBITAL DEBRIS (mini textured asteroids, realistic spectral types) ----------
   const debrisGroup = new THREE.Group();
-  const debrisCount = isMobile ? 14 : 26;
-  const debrisGeos = [
-    () => new THREE.IcosahedronGeometry(0.04 + Math.random() * 0.09, 0),
-    () => new THREE.DodecahedronGeometry(0.04 + Math.random() * 0.08, 0),
-    () => new THREE.TetrahedronGeometry(0.05 + Math.random() * 0.09, 0),
-  ];
+  const debrisCount = isMobile ? 16 : 30;
+  const dTmp = new THREE.Vector3();
+
   for (let i = 0; i < debrisCount; i++) {
-    const g = debrisGeos[Math.floor(Math.random() * debrisGeos.length)]();
+    // varied sizes — mix of small pebbles and larger chunks
+    const sizeRoll = Math.random();
+    const size = sizeRoll < 0.6
+      ? 0.03 + Math.random() * 0.05    // small
+      : sizeRoll < 0.9
+        ? 0.07 + Math.random() * 0.07  // medium
+        : 0.14 + Math.random() * 0.06; // large chunk
+    const segs = size < 0.07 ? 10 : (size < 0.14 ? 14 : 18);
+
+    // mini-sphere with per-vertex displacement (unique seed)
+    const g = new THREE.SphereGeometry(size, segs, Math.floor(segs / 2));
     const dp = g.attributes.position;
+    const seed = i * 137.5 + Math.random() * 50;
+    const stretch = new THREE.Vector3(
+      0.85 + Math.random() * 0.3,
+      0.85 + Math.random() * 0.3,
+      0.85 + Math.random() * 0.3
+    );
     for (let j = 0; j < dp.count; j++) {
-      dp.setXYZ(j,
-        dp.getX(j) * (1 + (Math.random() - 0.5) * 0.35),
-        dp.getY(j) * (1 + (Math.random() - 0.5) * 0.35),
-        dp.getZ(j) * (1 + (Math.random() - 0.5) * 0.35));
+      dTmp.fromBufferAttribute(dp, j);
+      const n = dTmp.clone().normalize();
+      const d1 = fbm(n.x * 2 + seed,        n.y * 2 + seed,        n.z * 2 + seed,        3);
+      const d2 = fbm(n.x * 6 + seed * 2.3,  n.y * 6 + seed * 2.3,  n.z * 6 + seed * 2.3,  2);
+      const disp = (d1 - 0.5) * 0.35 + (d2 - 0.5) * 0.12;
+      dTmp.copy(n).multiply(stretch).multiplyScalar(size * (1 + disp));
+      dp.setXYZ(j, dTmp.x, dTmp.y, dTmp.z);
     }
     g.computeVertexNormals();
+
+    // spectral type distribution (matches real main-belt statistics roughly)
+    const t = Math.random();
+    let tint, roughness, metalness, bumpScale;
+    if (t < 0.55) {
+      // S-type: silicaceous, brown-gray (most common in inner belt)
+      tint = new THREE.Color().setHSL(0.08, 0.15 + Math.random() * 0.15, 0.42 + Math.random() * 0.22);
+      roughness = 0.92 + Math.random() * 0.05;
+      metalness = 0.04;
+      bumpScale = 0.006;
+    } else if (t < 0.80) {
+      // C-type: carbonaceous, dark sooty (most common overall)
+      tint = new THREE.Color().setHSL(0.05, 0.04, 0.14 + Math.random() * 0.10);
+      roughness = 0.97;
+      metalness = 0.02;
+      bumpScale = 0.004;
+    } else if (t < 0.93) {
+      // V-type / iron-rich: reddish, like Vesta basalt
+      tint = new THREE.Color().setHSL(0.04, 0.40, 0.36 + Math.random() * 0.14);
+      roughness = 0.82;
+      metalness = 0.15;
+      bumpScale = 0.008;
+    } else {
+      // M-type: metallic nickel-iron (rare, shiny)
+      tint = new THREE.Color().setHSL(0.08, 0.06, 0.55 + Math.random() * 0.15);
+      roughness = 0.32 + Math.random() * 0.15;
+      metalness = 0.75;
+      bumpScale = 0.012;
+    }
+
     const m = new THREE.MeshStandardMaterial({
-      color: new THREE.Color().setHSL(0.07, 0.12, 0.25 + Math.random() * 0.25),
-      roughness: 0.96, metalness: 0.05,
+      map: surfaceTex,
+      bumpMap: surfaceTex,
+      bumpScale: bumpScale,
+      color: tint,
+      roughness: roughness,
+      metalness: metalness,
     });
+
     const d = new THREE.Mesh(g, m);
     d.userData = {
-      angle: Math.random() * Math.PI * 2,
-      radius: 2.4 + Math.random() * 1.8,
-      tilt:  (Math.random() - 0.5) * 0.9,
-      speed: (Math.random() < 0.5 ? 1 : -1) * (0.06 + Math.random() * 0.18),
-      incl:  (Math.random() - 0.5) * 0.7,
+      angle:    Math.random() * Math.PI * 2,
+      radius:   2.4 + Math.random() * 1.8,
+      tilt:    (Math.random() - 0.5) * 0.9,
+      speed:   (Math.random() < 0.5 ? 1 : -1) * (0.06 + Math.random() * 0.18),
+      incl:    (Math.random() - 0.5) * 0.7,
       rotAxis:  new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize(),
       rotSpeed: 0.4 + Math.random() * 1.6,
     };
