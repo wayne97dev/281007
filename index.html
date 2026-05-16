@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#05060a" />
+<meta name="color-scheme" content="dark" />
+<link rel="modulepreload" href="https://unpkg.com/three@0.160.0/build/three.module.js" />
 <title>ASTEROID (281007) OLIVIAPERROTTO — $ASTEROID on Ethereum</title>
 <meta name="description" content="Asteroid 281007 Oliviaperrotto — the official memecoin on Ethereum, dedicated to the asteroid named after Olivia Perrotto." />
 
@@ -135,6 +138,7 @@
   #asteroid-canvas {
     width: 100%; height: 100%;
     cursor: grab;
+    touch-action: none;       /* canvas captures touch (drag-rotate) without scroll conflict */
     filter: drop-shadow(0 40px 80px rgba(108,180,255,0.2)) drop-shadow(0 0 30px rgba(255,212,59,0.08));
   }
   #asteroid-canvas:active { cursor: grabbing; }
@@ -231,20 +235,37 @@
 
   /* Responsive */
   @media (max-width: 900px) {
-    .hero { grid-template-columns: 1fr; padding-top: 30px; min-height: auto; gap: 20px; }
-    .hero-3d { aspect-ratio: 1/1; max-width: 460px; margin: 0 auto; }
+    .hero { grid-template-columns: 1fr; padding: 30px 20px 24px; min-height: auto; gap: 24px; }
+    .hero-3d { aspect-ratio: 1/1; max-width: 420px; margin: 0 auto; min-height: 320px; }
     .about { grid-template-columns: 1fr; gap: 30px; }
-    .badge-wrap { max-width: 320px; margin: 0 auto; }
+    .badge-wrap { max-width: 300px; margin: 0 auto; }
     .steps { grid-template-columns: 1fr 1fr; }
+    section { padding: 60px 20px; }
+    .nav { padding: 12px 18px; }
     nav.links { display: none; }
     .stats { grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .stat .num { font-size: 18px; }
+    .ctas { gap: 10px; }
+    .btn { padding: 11px 16px; font-size: 13px; } /* min 44px tap height with line-height */
   }
   @media (max-width: 500px) {
     .steps { grid-template-columns: 1fr; }
     .stats { grid-template-columns: 1fr; }
-    .ca-box { flex-wrap: wrap; }
+    .ca-box { flex-wrap: wrap; padding: 10px 12px; }
     .ca-box code { font-size: 11px; min-width: 100%; }
+    .hero-3d { max-width: 340px; min-height: 280px; }
+    .hero-text h1 { line-height: 0.95; }
+    .brand-text small { display: none; }     /* tighten header on small screens */
+    .brand-text { font-size: 13px; }
+    header .btn { padding: 9px 14px; font-size: 12px; }
+  }
+  @media (max-width: 360px) {
+    .hero-3d { max-width: 280px; min-height: 240px; }
+    .hero { padding: 20px 16px; gap: 18px; }
+  }
+  /* Reduce motion preference: kill rotations and pulses */
+  @media (prefers-reduced-motion: reduce) {
+    .badge-wrap::before { animation: none; }
   }
 </style>
 </head>
@@ -367,23 +388,32 @@
 </script>
 
 <script>
-  // ---------- Starfield (pure canvas) ----------
+  // ---------- Starfield (background canvas, throttled & visibility-aware) ----------
   (function(){
     const canvas = document.getElementById('stars');
     const ctx = canvas.getContext('2d');
+    const isMobileBG = window.matchMedia('(max-width: 768px)').matches;
+    // Throttle: 60fps desktop, 20fps mobile (twinkle barely needs more than that)
+    const frameMs = isMobileBG ? 50 : 16.67;
+    // Cap DPR on mobile for fillrate
+    const dpr = Math.min(window.devicePixelRatio, isMobileBG ? 1.5 : 2);
     let stars = [];
-    let w, h;
+    let w, h, lastT = 0;
+    let visible = !document.hidden;
 
     function resize() {
-      w = canvas.width = window.innerWidth * devicePixelRatio;
-      h = canvas.height = window.innerHeight * devicePixelRatio;
+      w = canvas.width = window.innerWidth * dpr;
+      h = canvas.height = window.innerHeight * dpr;
       canvas.style.width = window.innerWidth + 'px';
       canvas.style.height = window.innerHeight + 'px';
-      const count = Math.min(380, Math.floor((w * h) / 18000));
+      // Fewer stars on mobile
+      const density = isMobileBG ? 35000 : 18000;
+      const maxStars = isMobileBG ? 180 : 380;
+      const count = Math.min(maxStars, Math.floor((w * h) / density));
       stars = Array.from({length: count}, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
-        r: Math.random() * 1.4 * devicePixelRatio + 0.2,
+        r: Math.random() * 1.4 * dpr + 0.2,
         a: Math.random() * 0.6 + 0.2,
         s: Math.random() * 0.5 + 0.2,
         tw: Math.random() * Math.PI * 2
@@ -391,8 +421,13 @@
     }
     resize();
     window.addEventListener('resize', resize);
+    document.addEventListener('visibilitychange', () => { visible = !document.hidden; });
 
     function frame(t) {
+      requestAnimationFrame(frame);
+      if (!visible) return;
+      if (t - lastT < frameMs) return;
+      lastT = t;
       ctx.clearRect(0, 0, w, h);
       for (const s of stars) {
         s.tw += 0.02 * s.s;
@@ -402,7 +437,6 @@
         ctx.fillStyle = `rgba(255,255,255,${a})`;
         ctx.fill();
       }
-      requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
   })();
@@ -431,14 +465,23 @@
   //  ASTEROID 281007 — Cinematic 3D scene
   // ============================================================
   const canvas = document.getElementById('asteroid-canvas');
-  const isMobile = window.matchMedia('(max-width: 768px)').matches;
-  const isLowEnd = navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4;
+  const isMobile  = window.matchMedia('(max-width: 768px)').matches;
+  const isTouch   = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  const cpuCores  = navigator.hardwareConcurrency || 4;
+  const isLowEnd  = cpuCores < 4;
+  const lowPerf   = isMobile && isLowEnd;          // very weak phones: skip bloom etc.
+  const targetMs  = isMobile ? 33.4 : 0;           // 30fps cap on mobile, uncapped on desktop
 
   // ---------- RENDERER ----------
   const renderer = new THREE.WebGLRenderer({
-    canvas, antialias: true, alpha: true, powerPreference: 'high-performance'
+    canvas,
+    antialias: !lowPerf,                            // MSAA off on weakest phones
+    alpha: true,
+    powerPreference: 'high-performance'
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+  // Cap pixel ratio aggressively on mobile to save fillrate
+  const maxDPR = lowPerf ? 1.0 : (isMobile ? 1.5 : 2.0);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxDPR));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.35;
@@ -506,7 +549,7 @@
     }
     return pts;
   }
-  const craterCount = isMobile ? 22 : 36;
+  const craterCount = lowPerf ? 14 : (isMobile ? 22 : 36);
   const seeds = fibonacciSphere(craterCount * 4);
   const craters = [];
   for (let i = 0; i < craterCount; i++) {
@@ -543,10 +586,10 @@
   surfaceTex.colorSpace = THREE.SRGBColorSpace;
   surfaceTex.wrapS = THREE.RepeatWrapping;
   surfaceTex.wrapT = THREE.ClampToEdgeWrapping;
-  surfaceTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  surfaceTex.anisotropy = Math.min(lowPerf ? 2 : (isMobile ? 4 : 8), renderer.capabilities.getMaxAnisotropy());
 
   // ---------- GEOMETRY (high-res sphere — uniform UVs for texturing) ----------
-  const segments = isMobile ? 128 : 200;
+  const segments = lowPerf ? 96 : (isMobile ? 128 : 200);
   const baseRadius = 1.8;
   const geo = new THREE.SphereGeometry(baseRadius, segments, Math.floor(segments / 2));
   const pos = geo.attributes.position;
@@ -625,7 +668,7 @@
   scene.add(sunGlow);
 
   // ---------- STARFIELD (3D, color-varied) ----------
-  const starCount = isMobile ? 1800 : 4000;
+  const starCount = lowPerf ? 700 : (isMobile ? 1800 : 4000);
   const starsGeo = new THREE.BufferGeometry();
   const starPos = new Float32Array(starCount * 3);
   const starCol = new Float32Array(starCount * 3);
@@ -692,7 +735,7 @@
 
   // ---------- ORBITAL DEBRIS (mini textured asteroids, realistic spectral types) ----------
   const debrisGroup = new THREE.Group();
-  const debrisCount = isMobile ? 16 : 30;
+  const debrisCount = lowPerf ? 8 : (isMobile ? 16 : 30);
   const dTmp = new THREE.Vector3();
 
   for (let i = 0; i < debrisCount; i++) {
@@ -778,7 +821,7 @@
   scene.add(debrisGroup);
 
   // ---------- DUST PARTICLES (close haze) ----------
-  const dustCount = isMobile ? 250 : 500;
+  const dustCount = lowPerf ? 80 : (isMobile ? 250 : 500);
   const dustGeo = new THREE.BufferGeometry();
   const dustPos = new Float32Array(dustCount * 3);
   for (let i = 0; i < dustCount; i++) {
@@ -797,22 +840,31 @@
   const dust = new THREE.Points(dustGeo, dustMat);
   scene.add(dust);
 
-  // ---------- POSTPROCESSING (bloom + output) ----------
-  const composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    isLowEnd ? 0.45 : 0.7,  // strength
-    0.85,                    // radius
-    0.55                     // threshold
-  );
-  composer.addPass(bloom);
-  composer.addPass(new OutputPass());
+  // ---------- POSTPROCESSING ----------
+  // Bloom is the most expensive pass. Skip entirely on very-weak devices and
+  // render directly. On regular mobile use lighter bloom params.
+  const useBloom = !lowPerf;
+  let composer = null;
+  if (useBloom) {
+    composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloom = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      isMobile ? 0.45 : 0.7,   // strength
+      isMobile ? 0.6  : 0.85,  // radius
+      0.55                      // threshold
+    );
+    composer.addPass(bloom);
+    composer.addPass(new OutputPass());
+  }
+  const renderFrame = useBloom
+    ? () => composer.render()
+    : () => renderer.render(scene, camera);
 
   function fit() {
     const rect = canvas.getBoundingClientRect();
     renderer.setSize(rect.width, rect.height, false);
-    composer.setSize(rect.width, rect.height);
+    if (composer) composer.setSize(rect.width, rect.height);
     camera.aspect = rect.width / rect.height;
     camera.updateProjectionMatrix();
     starsMat.uniforms.uPixelRatio.value = renderer.getPixelRatio();
@@ -850,24 +902,42 @@
   setTimeout(() => { hint && hint.classList.add('hide'); }, 5000);
 
   let mx = 0, my = 0, tx = 0, ty = 0;
-  window.addEventListener('mousemove', (e) => {
-    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-    mx = (e.clientX - cx) / cx;
-    my = (e.clientY - cy) / cy;
-  });
+  if (!isTouch) {
+    // mouse parallax only matters with a real cursor — skip on touch devices
+    window.addEventListener('mousemove', (e) => {
+      const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+      mx = (e.clientX - cx) / cx;
+      my = (e.clientY - cy) / cy;
+    }, { passive: true });
+  }
 
   // pause when offscreen
   let visible = true;
-  const io = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; }, { threshold: 0.05 });
+  const io = new IntersectionObserver(([entry]) => {
+    const wasVisible = visible;
+    visible = entry.isIntersecting;
+    if (visible && !wasVisible) clock.getDelta(); // discard delta to avoid animation jump
+  }, { threshold: 0.05 });
   io.observe(canvas);
+
+  // pause when tab/window hidden (Page Visibility API) — saves battery dramatically
+  let pageVisible = !document.hidden;
+  document.addEventListener('visibilitychange', () => {
+    pageVisible = !document.hidden;
+    if (pageVisible) clock.getDelta(); // discard accumulated delta to avoid jump
+  });
 
   // ---------- ANIMATION LOOP ----------
   const clock = new THREE.Clock();
-  function animate() {
+  let lastRender = 0;
+  function animate(now) {
     requestAnimationFrame(animate);
-    if (!visible) return;
+    if (!visible || !pageVisible) return;
+    // FPS cap on mobile (30fps) — saves battery and reduces thermal throttling
+    if (targetMs && now - lastRender < targetMs) return;
+    lastRender = now;
     const dt = Math.min(clock.getDelta(), 0.05);
-    const t = clock.elapsedTime;
+    const t  = clock.elapsedTime;
 
     if (!dragging) {
       // inertia from previous drag
@@ -908,9 +978,9 @@
     camera.position.y = -ty + Math.cos(t * 0.19) * 0.07;
     camera.lookAt(0, 0, 0);
 
-    composer.render();
+    renderFrame();
   }
-  animate();
+  animate(0);
 </script>
 
 </body>
