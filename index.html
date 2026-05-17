@@ -351,7 +351,7 @@
     </div>
   </header>
 
-  <a class="donation-bar" href="https://etherscan.io/address/0x92EE2370b56DC32794A6CD72585dC01d4288D314" target="_blank" rel="noopener" aria-label="Donation wallet to St. Jude Children's Research Hospital">
+  <a class="donation-bar" href="https://www.livo.trade/profile/0x92EE2370b56DC32794A6CD72585dC01d4288D314" target="_blank" rel="noopener" aria-label="Live fees pending donation to St. Jude — verified on Livo">
     <div class="donation-inner">
       <span class="heart-pulse" aria-hidden="true">&#10084;</span>
       <span class="donation-cta">Donated to St. Jude</span>
@@ -512,17 +512,19 @@
     requestAnimationFrame(frame);
   })();
 
-  // ---------- Live donation ticker (St. Jude wallet balance) ----------
+  // ---------- Live donation ticker (Livo creator fees, all tokens) ----------
+  // Mirrors the metric shown on livo.trade/profile/<creator>:
+  //   sum across all tokens of (accountedEth - claimedEth) = pending fees
+  // Source: Livo's public Hasura GraphQL indexer (CORS open to all origins).
   (function(){
-    const STJUDE = '0x92EE2370b56DC32794A6CD72585dC01d4288D314';
-    // Public Ethereum RPC endpoints (no API key, CORS-friendly) — tried in order.
-    // Verified working: publicnode, drpc, 1rpc. Avoid: cloudflare-eth (often 500s),
-    // llamarpc (Cloudflare 525), ankr (now requires API key).
-    const RPCS = [
-      'https://ethereum-rpc.publicnode.com',
-      'https://eth.drpc.org',
-      'https://1rpc.io/eth',
-    ];
+    const CREATOR = '0x92ee2370b56dc32794a6cd72585dc01d4288d314';
+    const HASURA_URL = 'https://indexer-cdn.livo.trade/v1/graphql';
+    const HASURA_QUERY = `query CreatorFees($creator: String!) {
+      RewardsTokenCreator(where: {creator: {_eq: $creator}}, limit: 100) {
+        accountedEth
+        claimedEth
+      }
+    }`;
     const PRICE_URLS = [
       'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd',
       'https://api.coinbase.com/v2/prices/ETH-USD/spot',
@@ -530,24 +532,27 @@
     const elEth = document.getElementById('donatedEth');
     const elUsd = document.getElementById('donatedUsd');
 
-    async function rpcCall(method, params) {
-      for (const url of RPCS) {
-        try {
-          const r = await fetch(url, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ jsonrpc:'2.0', method, params, id: 1 })
-          });
-          if (!r.ok) continue;
-          const j = await r.json();
-          if (j && j.result) return j.result;
-        } catch (e) { /* fallback to next */ }
+    async function fetchCreatorFeesWei() {
+      const r = await fetch(HASURA_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: HASURA_QUERY, variables: { creator: CREATOR } })
+      });
+      if (!r.ok) throw new Error('Hasura HTTP ' + r.status);
+      const j = await r.json();
+      const rows = j && j.data && j.data.RewardsTokenCreator;
+      if (!Array.isArray(rows)) throw new Error('Unexpected response shape');
+      let total = 0n;
+      for (const row of rows) {
+        const accounted = BigInt(row.accountedEth || '0');
+        const claimed   = BigInt(row.claimedEth   || '0');
+        const pending   = accounted - claimed;
+        if (pending > 0n) total += pending;
       }
-      throw new Error('All RPC endpoints failed');
+      return total;
     }
 
     async function fetchEthPrice() {
-      // CoinGecko
       try {
         const r = await fetch(PRICE_URLS[0]);
         if (r.ok) {
@@ -555,7 +560,6 @@
           if (j && j.ethereum && j.ethereum.usd) return j.ethereum.usd;
         }
       } catch (e) {}
-      // Coinbase fallback
       try {
         const r = await fetch(PRICE_URLS[1]);
         if (r.ok) {
@@ -567,10 +571,10 @@
     }
 
     function fmtEth(n) {
-      if (n === 0) return '0';
-      if (n < 0.0001) return n.toFixed(6);
-      if (n < 1) return n.toFixed(4);
-      if (n < 1000) return n.toFixed(3);
+      if (n === 0)       return '0';
+      if (n < 0.0001)    return n.toFixed(6);
+      if (n < 1)         return n.toFixed(4);
+      if (n < 1000)      return n.toFixed(3);
       return n.toLocaleString('en-US', { maximumFractionDigits: 1 });
     }
     function fmtUsd(n) {
@@ -581,12 +585,8 @@
 
     async function update() {
       try {
-        const [balanceHex, price] = await Promise.all([
-          rpcCall('eth_getBalance', [STJUDE, 'latest']),
-          fetchEthPrice(),
-        ]);
-        const wei = BigInt(balanceHex);
-        // Convert with 6-decimal precision via integer division (avoids Number overflow)
+        const [wei, price] = await Promise.all([fetchCreatorFeesWei(), fetchEthPrice()]);
+        // 6-decimal precision via integer division (no Number overflow on large wei)
         const eth = Number(wei / 10n**12n) / 1e6;
         elEth.textContent = fmtEth(eth);
         elEth.classList.remove('loading');
@@ -596,7 +596,7 @@
         }
       } catch (e) {
         console.warn('Donation ticker update failed:', e);
-        // leave previous values; if first load, the em-dash stays
+        // keep previous values on transient failure
       }
     }
 
