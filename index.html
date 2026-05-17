@@ -515,11 +515,13 @@
   // ---------- Live donation ticker (St. Jude wallet balance) ----------
   (function(){
     const STJUDE = '0x92EE2370b56DC32794A6CD72585dC01d4288D314';
-    // Public Ethereum RPC endpoints (no API key, CORS-friendly) — tried in order
+    // Public Ethereum RPC endpoints (no API key, CORS-friendly) — tried in order.
+    // Verified working: publicnode, drpc, 1rpc. Avoid: cloudflare-eth (often 500s),
+    // llamarpc (Cloudflare 525), ankr (now requires API key).
     const RPCS = [
-      'https://cloudflare-eth.com',
-      'https://eth.llamarpc.com',
-      'https://rpc.ankr.com/eth',
+      'https://ethereum-rpc.publicnode.com',
+      'https://eth.drpc.org',
+      'https://1rpc.io/eth',
     ];
     const PRICE_URLS = [
       'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd',
