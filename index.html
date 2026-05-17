@@ -52,6 +52,64 @@
 
   /* Layout */
   .wrap { position: relative; z-index: 2; }
+
+  /* Live donation bar — sits between header and hero */
+  .donation-bar {
+    display: block; text-decoration: none; color: var(--fg);
+    background: linear-gradient(90deg, rgba(255,90,74,0.10) 0%, rgba(255,212,59,0.05) 50%, rgba(255,90,74,0.10) 100%);
+    border-bottom: 1px solid rgba(255,212,59,0.18);
+    transition: background .25s;
+  }
+  .donation-bar:hover {
+    background: linear-gradient(90deg, rgba(255,90,74,0.16) 0%, rgba(255,212,59,0.09) 50%, rgba(255,90,74,0.16) 100%);
+  }
+  .donation-inner {
+    max-width: 1280px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    padding: 10px 24px; flex-wrap: wrap;
+  }
+  .heart-pulse {
+    color: #ff5a4a; font-size: 14px; display: inline-block;
+    animation: heart-beat 1.4s ease-in-out infinite;
+    text-shadow: 0 0 8px rgba(255,90,74,0.6);
+  }
+  @keyframes heart-beat {
+    0%, 100% { transform: scale(1); }
+    20% { transform: scale(1.25); }
+    40% { transform: scale(1); }
+    60% { transform: scale(1.1); }
+    80% { transform: scale(1); }
+  }
+  .donation-cta {
+    font-size: 11px; letter-spacing: 0.16em; font-weight: 700;
+    color: var(--muted); text-transform: uppercase;
+  }
+  .donation-amounts {
+    display: inline-flex; align-items: baseline; gap: 10px;
+    font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 14px;
+    color: var(--accent);
+  }
+  .donation-amounts .sep { color: var(--muted); font-weight: 400; opacity: 0.6; }
+  .donation-amounts .unit {
+    font-size: 9px; letter-spacing: 0.18em; color: var(--muted);
+    font-weight: 700; margin-left: 2px;
+  }
+  .donation-amounts .num.loading { opacity: 0.45; }
+  .donation-arrow {
+    color: var(--accent-2); font-size: 12px; font-weight: 700;
+    transition: transform .2s;
+  }
+  .donation-bar:hover .donation-arrow { transform: translate(3px, -3px); }
+
+  @media (max-width: 700px) {
+    .donation-inner { padding: 9px 14px; gap: 10px; }
+    .donation-cta { font-size: 10px; letter-spacing: 0.12em; }
+    .donation-amounts { font-size: 13px; gap: 8px; }
+  }
+  @media (max-width: 460px) {
+    .donation-cta { display: none; }    /* keep just heart + numbers + arrow */
+  }
+
   header {
     position: sticky; top: 0; z-index: 50;
     backdrop-filter: blur(12px);
@@ -293,6 +351,19 @@
     </div>
   </header>
 
+  <a class="donation-bar" href="https://etherscan.io/address/0x92EE2370b56DC32794A6CD72585dC01d4288D314" target="_blank" rel="noopener" aria-label="Donation wallet to St. Jude Children's Research Hospital">
+    <div class="donation-inner">
+      <span class="heart-pulse" aria-hidden="true">&#10084;</span>
+      <span class="donation-cta">Donated to St. Jude</span>
+      <span class="donation-amounts">
+        <span><span class="num loading" id="donatedEth">—</span><span class="unit">ETH</span></span>
+        <span class="sep">·</span>
+        <span><span class="num loading" id="donatedUsd">—</span><span class="unit">USD</span></span>
+      </span>
+      <span class="donation-arrow" aria-hidden="true">↗</span>
+    </div>
+  </a>
+
   <section class="hero">
     <div class="hero-text">
       <div class="designation"><span class="dot"></span> MAIN BELT &middot; DISCOVERED 2006</div>
@@ -439,6 +510,105 @@
       }
     }
     requestAnimationFrame(frame);
+  })();
+
+  // ---------- Live donation ticker (St. Jude wallet balance) ----------
+  (function(){
+    const STJUDE = '0x92EE2370b56DC32794A6CD72585dC01d4288D314';
+    // Public Ethereum RPC endpoints (no API key, CORS-friendly) — tried in order
+    const RPCS = [
+      'https://cloudflare-eth.com',
+      'https://eth.llamarpc.com',
+      'https://rpc.ankr.com/eth',
+    ];
+    const PRICE_URLS = [
+      'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd',
+      'https://api.coinbase.com/v2/prices/ETH-USD/spot',
+    ];
+    const elEth = document.getElementById('donatedEth');
+    const elUsd = document.getElementById('donatedUsd');
+
+    async function rpcCall(method, params) {
+      for (const url of RPCS) {
+        try {
+          const r = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ jsonrpc:'2.0', method, params, id: 1 })
+          });
+          if (!r.ok) continue;
+          const j = await r.json();
+          if (j && j.result) return j.result;
+        } catch (e) { /* fallback to next */ }
+      }
+      throw new Error('All RPC endpoints failed');
+    }
+
+    async function fetchEthPrice() {
+      // CoinGecko
+      try {
+        const r = await fetch(PRICE_URLS[0]);
+        if (r.ok) {
+          const j = await r.json();
+          if (j && j.ethereum && j.ethereum.usd) return j.ethereum.usd;
+        }
+      } catch (e) {}
+      // Coinbase fallback
+      try {
+        const r = await fetch(PRICE_URLS[1]);
+        if (r.ok) {
+          const j = await r.json();
+          if (j && j.data && j.data.amount) return parseFloat(j.data.amount);
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    function fmtEth(n) {
+      if (n === 0) return '0';
+      if (n < 0.0001) return n.toFixed(6);
+      if (n < 1) return n.toFixed(4);
+      if (n < 1000) return n.toFixed(3);
+      return n.toLocaleString('en-US', { maximumFractionDigits: 1 });
+    }
+    function fmtUsd(n) {
+      if (n < 100)  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (n < 1e6)  return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+      return '$' + (n / 1e6).toFixed(2) + 'M';
+    }
+
+    async function update() {
+      try {
+        const [balanceHex, price] = await Promise.all([
+          rpcCall('eth_getBalance', [STJUDE, 'latest']),
+          fetchEthPrice(),
+        ]);
+        const wei = BigInt(balanceHex);
+        // Convert with 6-decimal precision via integer division (avoids Number overflow)
+        const eth = Number(wei / 10n**12n) / 1e6;
+        elEth.textContent = fmtEth(eth);
+        elEth.classList.remove('loading');
+        if (price !== null) {
+          elUsd.textContent = fmtUsd(eth * price);
+          elUsd.classList.remove('loading');
+        }
+      } catch (e) {
+        console.warn('Donation ticker update failed:', e);
+        // leave previous values; if first load, the em-dash stays
+      }
+    }
+
+    update();
+    // Refresh every 30s. Pause when tab hidden to save bandwidth/battery.
+    let interval = setInterval(update, 30000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        clearInterval(interval);
+      } else {
+        update();
+        interval = setInterval(update, 30000);
+      }
+    });
   })();
 
   // ---------- Copy CA ----------
