@@ -527,15 +527,17 @@
     requestAnimationFrame(frame);
   })();
 
-  // ---------- Live donation ticker (Livo creator fees, all tokens) ----------
-  // Mirrors the metric shown on livo.trade/profile/<creator>:
-  //   sum across all tokens of (accountedEth - claimedEth) = pending fees
-  // Source: Livo's public Hasura GraphQL indexer (CORS open to all origins).
+  // ---------- Live donation ticker (Livo creator fees for ASTEROID 281007) ----------
+  // Sources only the fees from the ASTEROID 281007 token, excluding any
+  // other token launched by the same creator wallet (e.g. JUDE Zero G).
+  // Formula: (accountedEth - claimedEth) = pending fees for this token.
+  // Backend: Livo's public Hasura GraphQL indexer (CORS open to all origins).
   (function(){
     const CREATOR = '0x92ee2370b56dc32794a6cd72585dc01d4288d314';
+    const TOKEN   = '0x543fec71bb0bbaa307bbf8ad04a49e37bdcc1110';
     const HASURA_URL = 'https://indexer-cdn.livo.trade/v1/graphql';
-    const HASURA_QUERY = `query CreatorFees($creator: String!) {
-      RewardsTokenCreator(where: {creator: {_eq: $creator}}, limit: 100) {
+    const HASURA_QUERY = `query AsteroidFees($creator: String!, $token: String!) {
+      RewardsTokenCreator(where: {creator: {_eq: $creator}, token: {_eq: $token}}) {
         accountedEth
         claimedEth
       }
@@ -551,7 +553,7 @@
       const r = await fetch(HASURA_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: HASURA_QUERY, variables: { creator: CREATOR } })
+        body: JSON.stringify({ query: HASURA_QUERY, variables: { creator: CREATOR, token: TOKEN } })
       });
       if (!r.ok) throw new Error('Hasura HTTP ' + r.status);
       const j = await r.json();
